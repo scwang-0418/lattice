@@ -1,0 +1,782 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>晶格實驗室</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-screen lab bench — 3D stage on the left, stacked control sections on the right (stacks on phones) */
+:root{
+  --bg:#eaeef2; --panel:#ffffff; --panel-2:#f3f6f9; --fg:#17212c; --muted:#5a6677; --line:#d5dce4;
+  --accent:#1d4cb3; --accent-ink:#ffffff; --canvas:#f7f9fb; --lp:#2c3644; --edge:#7a8697;
+  --ax-a:#cc3d33; --ax-b:#1f8d46; --ax-c:#2862cf; --pt:#b5318c; --dir:#d07c00; --pl:#0d9895;
+  --ok:#1b8648; --warn:#a86300; --bad:#bf3535;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0d1218; --panel:#141b23; --panel-2:#1a232e; --fg:#e2e8ee; --muted:#92a0b1; --line:#283441;
+  --accent:#86a8ff; --accent-ink:#0d1218; --canvas:#090d12; --lp:#c8d2dd; --edge:#5f6d7e;
+  --ax-a:#ff6a5c; --ax-b:#4bc874; --ax-c:#5f95ff; --pt:#ee62c3; --dir:#ffab2e; --pl:#2fcfc7;
+  --ok:#4bc874; --warn:#f0a83a; --bad:#ff6a6a; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0d1218; --panel:#141b23; --panel-2:#1a232e; --fg:#e2e8ee; --muted:#92a0b1; --line:#283441;
+  --accent:#86a8ff; --accent-ink:#0d1218; --canvas:#090d12; --lp:#c8d2dd; --edge:#5f6d7e;
+  --ax-a:#ff6a5c; --ax-b:#4bc874; --ax-c:#5f95ff; --pt:#ee62c3; --dir:#ffab2e; --pl:#2fcfc7;
+  --ok:#4bc874; --warn:#f0a83a; --bad:#ff6a6a; color-scheme:dark }
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.55}
+*{box-sizing:border-box}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 392px;gap:14px;height:100%;padding:14px 16px}
+.stage{position:relative;min-height:0;border:1px solid var(--line);border-radius:var(--r);background:var(--canvas);overflow:hidden;touch-action:none}
+.stage canvas{display:block;width:100%;height:100%;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.panel{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:2px}
+@media (max-width:880px){
+  html,body{height:auto}
+  .app{grid-template-columns:1fr;height:auto}
+  .stage{height:min(92vw,560px)}
+  .panel{overflow:visible}
+}
+
+/* header */
+.brand{padding:4px 2px 2px}
+.brand h1{margin:0;font-size:22px;font-weight:900;letter-spacing:.02em;text-wrap:balance}
+.brand h1 small{font-family:var(--f-mono);font-weight:500;font-size:12px;color:var(--muted);margin-left:8px;letter-spacing:.06em}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:13px}
+
+/* sections */
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.sec h2{margin:0;font-size:14px;font-weight:700;display:flex;align-items:baseline;gap:8px}
+.sec h2 .tag{font-family:var(--f-mono);font-size:12px;font-weight:600;padding:1px 7px;border-radius:4px;background:var(--panel-2);border:1px solid var(--line)}
+.sec h2 .sub{margin-left:auto;font-weight:400;font-size:12px;color:var(--muted)}
+.hint{font-size:12px;color:var(--muted);margin:0}
+
+/* system picker */
+.systems{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.sysbtn{all:unset;box-sizing:border-box;cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:6px 9px;background:var(--panel-2);display:flex;flex-direction:column;gap:1px;min-width:0}
+.sysbtn b{font-size:13.5px}
+.sysbtn b span{font-family:var(--f-mono);font-weight:500;font-size:11px;color:var(--muted);margin-left:5px}
+.sysbtn i{font-style:normal;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sysbtn:hover{border-color:var(--accent)}
+.sysbtn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sysbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.sysbtn[aria-pressed="true"] span,.sysbtn[aria-pressed="true"] i{color:var(--accent-ink);opacity:.85}
+
+/* parameter rows */
+.params{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 14px}
+.prow{display:grid;grid-template-columns:18px minmax(0,1fr) 52px;align-items:center;gap:6px;min-width:0}
+.prow label{font-family:var(--f-mono);font-weight:600;font-size:13px}
+.prow output{font-family:var(--f-mono);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums}
+.prow.locked label,.prow.locked output{color:var(--muted)}
+.prow.locked output::after{content:" 🔒";font-size:9px}
+input[type=range]{width:100%;accent-color:var(--accent);min-width:0;margin:0}
+.rule{font-family:var(--f-mono);font-size:12px;background:var(--panel-2);border-radius:6px;padding:6px 9px;border:1px dashed var(--line)}
+.note{font-size:12.5px;padding:6px 9px;border-radius:6px;border:1px solid var(--warn);color:var(--warn);background:transparent}
+
+/* steppers */
+.idxrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel-2)}
+.stepper span{font-family:var(--f-mono);font-size:12px;color:var(--muted);padding:0 4px 0 8px}
+.stepper button{all:unset;cursor:pointer;width:26px;height:30px;display:grid;place-items:center;font-size:16px;color:var(--fg)}
+.stepper button:hover{background:var(--line)}
+.stepper button:disabled{opacity:.3;cursor:not-allowed}
+.stepper output{font-family:var(--f-mono);font-weight:600;font-size:15px;width:28px;text-align:center;font-variant-numeric:tabular-nums}
+.bignot{font-family:var(--f-mono);font-size:20px;font-weight:600;margin-left:auto;letter-spacing:.06em}
+.ov{text-decoration:overline;text-decoration-thickness:1.5px}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;flex-wrap:wrap}
+.seg button{all:unset;cursor:pointer;flex:1 1 auto;text-align:center;padding:5px 8px;font-size:12.5px;background:var(--panel-2);border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{all:unset;cursor:pointer;font-family:var(--f-mono);font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2)}
+.chip:hover{border-color:var(--accent)}
+
+/* readouts */
+.ro{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;font-size:12.5px;margin:0}
+.ro dt{color:var(--muted)}
+.ro dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ro dd.txt{font-family:var(--f-body)}
+.good{color:var(--ok)} .warnc{color:var(--warn)}
+
+/* toggles */
+.toggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px}
+.toggles label{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
+.toggles input{accent-color:var(--accent)}
+
+/* swatches for section tags */
+.c-a{color:var(--ax-a)} .c-b{color:var(--ax-b)} .c-c{color:var(--ax-c)} .c-p{color:var(--pt)} .c-d{color:var(--dir)} .c-l{color:var(--pl)}
+.tag.c-p{border-color:var(--pt)} .tag.c-d{border-color:var(--dir)} .tag.c-l{border-color:var(--pl)}
+
+/* stage overlays */
+.labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;left:0;top:0;font-family:var(--f-mono);font-size:13px;font-weight:600;white-space:nowrap;padding:0 3px;border-radius:3px;text-shadow:0 0 3px var(--canvas),0 0 6px var(--canvas)}
+.lbl.sm{font-size:11px;font-weight:500}
+.legend{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;gap:2px;font-family:var(--f-mono);font-size:12px;background:color-mix(in srgb,var(--panel) 82%,transparent);border:1px solid var(--line);border-radius:6px;padding:6px 9px;pointer-events:none}
+.legend .sys{font-family:var(--f-body);font-weight:700;font-size:13px}
+.views{position:absolute;left:10px;right:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.views button{all:unset;cursor:pointer;font-size:12px;padding:4px 9px;border-radius:5px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 88%,transparent)}
+.views button:hover{border-color:var(--accent)}
+.views .tip{margin-left:auto;font-size:11.5px;color:var(--muted)}
+
+/* quiz */
+.qbtns{display:flex;gap:6px;flex-wrap:wrap}
+.btn{all:unset;cursor:pointer;font-size:13px;padding:6px 12px;border-radius:6px;border:1px solid var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn:hover{filter:brightness(1.08)}
+.quizbox{display:flex;flex-direction:column;gap:8px;background:var(--panel-2);border-radius:6px;padding:10px;border:1px solid var(--line)}
+.quizbox .prompt{font-weight:500}
+.qinputs{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-family:var(--f-mono)}
+.qinputs input{width:52px;font:inherit;font-size:15px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--fg);text-align:center}
+.qsys{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.qsys button{all:unset;cursor:pointer;text-align:center;padding:5px;border:1px solid var(--line);border-radius:5px;background:var(--panel);font-size:13px}
+.qsys button:hover{border-color:var(--accent)}
+.fb{font-size:13px;min-height:1.2em}
+.fb.ok{color:var(--ok)} .fb.no{color:var(--bad)}
+.score{font-family:var(--f-mono);font-size:12px;color:var(--muted);margin-left:auto}
+.masked{filter:blur(0)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <div class="stage" id="stage">
+    <canvas id="cv" aria-label="三維晶格顯示區"></canvas>
+    <div class="labels" id="labels"></div>
+    <div class="legend" id="legend"></div>
+    <div class="views">
+      <button data-view="iso">斜視</button>
+      <button data-view="a">沿 <b class="c-a">a</b></button>
+      <button data-view="b">沿 <b class="c-b">b</b></button>
+      <button data-view="c">沿 <b class="c-c">c</b></button>
+      <button data-view="dir">沿 <b class="c-d">[uvw]</b></button>
+      <button data-view="norm">看 <b class="c-l">(hkl)</b> 正面</button>
+      <span class="tip">拖曳旋轉・滾輪或雙指縮放</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="brand">
+      <h1>晶格實驗室<small>LATTICE LAB</small></h1>
+      <p>七種晶系、點座標 q r s、晶向 [u v w] 與晶面 (h k l) 的三維互動教材</p>
+    </div>
+
+    <section class="sec" id="secSys">
+      <h2>晶系 <span class="sub">Lattice system・簡單晶格 P</span></h2>
+      <div class="systems" id="systems"></div>
+      <div class="rule" id="rule"></div>
+      <div class="params" id="params"></div>
+      <div class="note" id="symNote" hidden></div>
+      <dl class="ro" id="roCell"></dl>
+    </section>
+
+    <section class="sec">
+      <h2>點座標 <span class="tag c-p">P (q r s)</span><span class="sub">分數座標</span></h2>
+      <div class="params" id="pParams" style="grid-template-columns:1fr"></div>
+      <div class="chips" id="pChips"></div>
+      <dl class="ro" id="roP"></dl>
+    </section>
+
+    <section class="sec">
+      <h2>晶向 <span class="tag c-d" id="dirTag">[u v w]</span></h2>
+      <div class="idxrow" id="dirStep"></div>
+      <div class="seg" id="dirMode"></div>
+      <dl class="ro" id="roDir"></dl>
+    </section>
+
+    <section class="sec">
+      <h2>晶面 <span class="tag c-l" id="plTag">(h k l)</span></h2>
+      <div class="idxrow" id="plStep"></div>
+      <div class="seg" id="plMode"></div>
+      <dl class="ro" id="roPl"></dl>
+    </section>
+
+    <section class="sec">
+      <h2>晶向與晶面的關係</h2>
+      <dl class="ro" id="roRel"></dl>
+    </section>
+
+    <section class="sec">
+      <h2>顯示</h2>
+      <div class="toggles" id="toggles"></div>
+      <div class="prow" style="grid-template-columns:auto minmax(0,1fr) 40px"><label for="nCell" style="font-family:var(--f-body);font-weight:400">晶胞數 n×n×n</label><input type="range" id="nCell" min="1" max="3" step="1" value="1"><output id="nOut">1</output></div>
+    </section>
+
+    <section class="sec">
+      <h2>練習 <span class="score" id="score"></span></h2>
+      <p class="hint">隱藏數值，從三維圖形判讀答案。</p>
+      <div class="qbtns">
+        <button class="btn" data-quiz="sys">辨認晶系</button>
+        <button class="btn" data-quiz="dir">讀晶向指數</button>
+        <button class="btn" data-quiz="plane">讀晶面指數</button>
+      </div>
+      <div class="quizbox" id="quizbox" hidden></div>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+/* ---------- data ---------- */
+const SYS = [
+  {id:'cubic', zh:'立方', en:'Cubic', rule:'a = b = c ・ α = β = γ = 90°', free:['a'], def:{a:1,b:1,c:1,al:90,be:90,ga:90}},
+  {id:'tetragonal', zh:'正方', en:'Tetragonal', rule:'a = b ≠ c ・ α = β = γ = 90°', free:['a','c'], def:{a:1,b:1,c:1.5,al:90,be:90,ga:90}},
+  {id:'orthorhombic', zh:'正交', en:'Orthorhombic', rule:'a ≠ b ≠ c ・ α = β = γ = 90°', free:['a','b','c'], def:{a:0.9,b:1.2,c:1.6,al:90,be:90,ga:90}},
+  {id:'hexagonal', zh:'六方', en:'Hexagonal', rule:'a = b ≠ c ・ α = β = 90°, γ = 120°', free:['a','c'], def:{a:1,b:1,c:1.6,al:90,be:90,ga:120}},
+  {id:'trigonal', zh:'三方（菱方）', en:'Rhombohedral', rule:'a = b = c ・ α = β = γ ≠ 90°', free:['a','al'], def:{a:1,b:1,c:1,al:70,be:70,ga:70}},
+  {id:'monoclinic', zh:'單斜', en:'Monoclinic', rule:'a ≠ b ≠ c ・ α = γ = 90° ≠ β', free:['a','b','c','be'], def:{a:1,b:1.3,c:1.5,al:90,be:110,ga:90}},
+  {id:'triclinic', zh:'三斜', en:'Triclinic', rule:'a ≠ b ≠ c ・ α ≠ β ≠ γ ≠ 90°', free:['a','b','c','al','be','ga'], def:{a:0.9,b:1.15,c:1.4,al:80,be:105,ga:95}},
+];
+const SYSMAP = Object.fromEntries(SYS.map(s=>[s.id,s]));
+const PKEYS = [['a','a',0.5,2,0.05],['al','α',40,140,1],['b','b',0.5,2,0.05],['be','β',40,140,1],['c','c',0.5,2,0.05],['ga','γ',40,140,1]];
+const PLABEL = {a:'a',b:'b',c:'c',al:'α',be:'β',ga:'γ'};
+
+const S = {
+  sys:'cubic', p:{...SYSMAP.cubic.def}, N:1,
+  P:[0.5,0.5,0.5], dir:[1,1,1], dirMode:'book', hkl:[1,1,1], plMode:'book',
+  show:{points:true, grid:true, P:true, dir:true, plane:true, angles:true, hex:true, ortho:true},
+  quiz:null, score:{ok:0,total:0}
+};
+
+const AQ=()=>(S.quiz&&!S.quiz.done)?S.quiz:null;
+/* ---------- math ---------- */
+const D2R=Math.PI/180;
+const add=(u,v)=>[u[0]+v[0],u[1]+v[1],u[2]+v[2]];
+const sub=(u,v)=>[u[0]-v[0],u[1]-v[1],u[2]-v[2]];
+const mul=(u,s)=>[u[0]*s,u[1]*s,u[2]*s];
+const dot=(u,v)=>u[0]*v[0]+u[1]*v[1]+u[2]*v[2];
+const cross=(u,v)=>[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+const len=u=>Math.hypot(u[0],u[1],u[2]);
+const unit=u=>{const l=len(u)||1;return mul(u,1/l)};
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a};
+const gcd3=v=>gcd(gcd(v[0],v[1]),v[2]);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
+function basisOf(p){
+  const ca=Math.cos(p.al*D2R), cb=Math.cos(p.be*D2R), cg=Math.cos(p.ga*D2R), sg=Math.sin(p.ga*D2R);
+  const A=[p.a,0,0], B=[p.b*cg,p.b*sg,0];
+  const cy=(ca-cb*cg)/sg, cz2=1-cb*cb-cy*cy;
+  if(cz2<=2e-3) return null;
+  const C=[p.c*cb,p.c*cy,p.c*Math.sqrt(cz2)];
+  return {A,B,C};
+}
+let BAS = basisOf(S.p);
+const f2c=f=>add(add(mul(BAS.A,f[0]),mul(BAS.B,f[1])),mul(BAS.C,f[2]));
+function recip(){
+  const {A,B,C}=BAS, V=dot(A,cross(B,C));
+  return {V, As:mul(cross(B,C),1/V), Bs:mul(cross(C,A),1/V), Cs:mul(cross(A,B),1/V)};
+}
+
+function classify(p){
+  const eL=(x,y)=>Math.abs(x-y)<0.011, eA=(x,y)=>Math.abs(x-y)<0.5;
+  const r90=eA(p.al,90)&&eA(p.be,90)&&eA(p.ga,90);
+  const abc=eL(p.a,p.b)&&eL(p.b,p.c);
+  if(r90&&abc) return 'cubic';
+  if(eL(p.a,p.b)&&eA(p.al,90)&&eA(p.be,90)&&eA(p.ga,120)) return 'hexagonal';
+  if(r90&&(eL(p.a,p.b)||eL(p.b,p.c)||eL(p.a,p.c))) return 'tetragonal';
+  if(abc&&eA(p.al,p.be)&&eA(p.be,p.ga)) return 'trigonal';
+  if(r90) return 'orthorhombic';
+  const n90=[p.al,p.be,p.ga].filter(x=>eA(x,90)).length;
+  if(n90===2) return 'monoclinic';
+  return 'triclinic';
+}
+function enforce(sys,p){
+  const q={...p};
+  switch(sys){
+    case 'cubic': q.b=q.c=q.a; q.al=q.be=q.ga=90; break;
+    case 'tetragonal': q.b=q.a; q.al=q.be=q.ga=90; break;
+    case 'orthorhombic': q.al=q.be=q.ga=90; break;
+    case 'hexagonal': q.b=q.a; q.al=q.be=90; q.ga=120; break;
+    case 'trigonal': q.b=q.c=q.a; q.be=q.ga=q.al; break;
+    case 'monoclinic': q.al=q.ga=90; break;
+  }
+  return q;
+}
+
+/* ---------- formatting ---------- */
+const f2=x=>(Math.abs(x)<5e-4?0:x).toFixed(2);
+const f3=x=>(Math.abs(x)<5e-5?0:x).toFixed(3);
+function nice(x){
+  for(const d of [1,2,3,4,6]){const n=Math.round(x*d); if(Math.abs(n/d-x)<1e-6){
+    if(d===1) return String(n);
+    const g=gcd(n,d); const nn=n/g, dd=d/g; if(dd===1) return String(nn);
+    return (nn<0?'−':'')+Math.abs(nn)+'/'+dd;}}
+  return x.toFixed(2);
+}
+const ix=n=>n<0?`<span class="ov">${-n}</span>`:String(n);
+const idx=(v,o,c)=>`${o}${v.map(ix).join('')}${c}`;
+const idxS=(v,o,c)=>`${o}${v.map(ix).join(' ')}${c}`;
+function frac1(h){ if(h===0) return '∞'; const s=h<0?'−':''; const a=Math.abs(h); return a===1?s+'1':s+'1/'+a; }
+const hidden = ()=>`<span class="warnc">?</span>`;
+
+/* ---------- three.js ---------- */
+const stage=document.getElementById('stage'), cv=document.getElementById('cv'), labelsEl=document.getElementById('labels');
+const renderer=new THREE.WebGLRenderer({canvas:cv, antialias:true, alpha:false});
+renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+const scene=new THREE.Scene();
+const pcam=new THREE.PerspectiveCamera(32,1,0.01,500);
+const ocam=new THREE.OrthographicCamera(-1,1,1,-1,-100,500);
+pcam.up.set(0,0,1); ocam.up.set(0,0,1);
+scene.add(new THREE.HemisphereLight(0xffffff,0x667788,0.75));
+const keyLight=new THREE.DirectionalLight(0xffffff,0.6); scene.add(keyLight);
+const world=new THREE.Group(); scene.add(world);
+
+const V3=a=>new THREE.Vector3(a[0],a[1],a[2]);
+let TOK={};
+function readTokens(){
+  const cs=getComputedStyle(document.documentElement);
+  const g=n=>cs.getPropertyValue(n).trim()||'#888';
+  TOK={canvas:g('--canvas'),lp:g('--lp'),edge:g('--edge'),a:g('--ax-a'),b:g('--ax-b'),c:g('--ax-c'),pt:g('--pt'),dir:g('--dir'),pl:g('--pl'),muted:g('--muted'),fg:g('--fg')};
+  scene.background=new THREE.Color(TOK.canvas);
+}
+const mat=(color,o={})=>new THREE.MeshStandardMaterial({color,roughness:.45,metalness:.05,...o});
+const SPH=new THREE.SphereGeometry(1,24,16);
+function sphere(pos,r,color,o){const m=new THREE.Mesh(SPH,mat(color,o));m.position.copy(V3(pos));m.scale.setScalar(r);world.add(m);return m}
+function rod(p,q,r,color,o){
+  const d=sub(q,p), L=len(d); if(L<1e-6) return;
+  const g=new THREE.CylinderGeometry(r,r,L,14,1);
+  const m=new THREE.Mesh(g,mat(color,o));
+  m.position.copy(V3(mul(add(p,q),.5)));
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),V3(unit(d)));
+  world.add(m); return m;
+}
+function arrow(p,q,r,color){
+  const d=sub(q,p),L=len(d); if(L<1e-6) return;
+  const hl=Math.min(L*0.35,r*7), u=unit(d), base=sub(q,mul(u,hl));
+  rod(p,base,r,color);
+  const g=new THREE.ConeGeometry(r*2.6,hl,20); const m=new THREE.Mesh(g,mat(color));
+  m.position.copy(V3(add(base,mul(u,hl/2)))); m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),V3(u)); world.add(m);
+}
+function polyline(pts,color,opacity=1,dashed=false,scale=1){
+  const g=new THREE.BufferGeometry().setFromPoints(pts.map(V3));
+  const m=dashed?new THREE.LineDashedMaterial({color,dashSize:.05*scale,gapSize:.04*scale,transparent:opacity<1,opacity})
+               :new THREE.LineBasicMaterial({color,transparent:opacity<1,opacity});
+  const l=new THREE.Line(g,m); if(dashed) l.computeLineDistances(); world.add(l); return l;
+}
+function segments(pairs,color,opacity){
+  const g=new THREE.BufferGeometry().setFromPoints(pairs.flat().map(V3));
+  const l=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color,transparent:true,opacity})); world.add(l);
+}
+function clearWorld(){
+  world.traverse(o=>{ if(o.geometry&&o.geometry!==SPH) o.geometry.dispose(); if(o.material) o.material.dispose(); });
+  world.clear(); labelsEl.innerHTML=''; LABELS.length=0;
+}
+const LABELS=[];
+function label(html,pos,color,cls=''){
+  const el=document.createElement('div'); el.className='lbl '+cls; el.innerHTML=html; el.style.color=color; labelsEl.appendChild(el);
+  LABELS.push({el,v:V3(pos)});
+}
+
+/* plane clipped to box [0,N]^3 in fractional coords */
+function clipPlane(h,d,N){
+  const C=[];for(const x of [0,N])for(const y of [0,N])for(const z of [0,N])C.push([x,y,z]);
+  const E=[];for(let i=0;i<8;i++)for(let j=i+1;j<8;j++){const df=sub(C[i],C[j]);if((df[0]!==0)+(df[1]!==0)+(df[2]!==0)===1)E.push([C[i],C[j]])}
+  const pts=[]; const pushU=p=>{if(!pts.some(q=>len(sub(p,q))<1e-7))pts.push(p)};
+  for(const [p0,p1] of E){
+    const a=dot(h,p0)-d,b=dot(h,p1)-d;
+    if(Math.abs(a)<1e-9) pushU(p0); if(Math.abs(b)<1e-9) pushU(p1);
+    if(a*b<0){const t=a/(a-b);pushU(add(p0,mul(sub(p1,p0),t)))}
+  }
+  return pts;
+}
+function drawPolygon(fpts,normal,color,opacity,outline=true){
+  if(fpts.length<3) return;
+  const P=fpts.map(f2c), cen=mul(P.reduce(add,[0,0,0]),1/P.length);
+  const n=unit(normal); let e1=unit(sub(P[0],cen)); const e2=cross(n,e1);
+  P.sort((p,q)=>{const a=sub(p,cen),b=sub(q,cen);return Math.atan2(dot(a,e2),dot(a,e1))-Math.atan2(dot(b,e2),dot(b,e1))});
+  const g=new THREE.BufferGeometry();
+  const tri=[];for(let i=0;i<P.length;i++){tri.push(...cen,...P[i],...P[(i+1)%P.length])}
+  g.setAttribute('position',new THREE.Float32BufferAttribute(tri,3)); g.computeVertexNormals();
+  const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color,transparent:true,opacity,side:THREE.DoubleSide,depthWrite:false,roughness:.8}));
+  m.renderOrder=2; world.add(m);
+  if(outline) polyline([...P,P[0]],color,Math.min(1,opacity+0.45));
+}
+
+/* ---------- scene build ---------- */
+function bookStart(v){return v.map(x=>x<0?1:0)}
+function build(){
+  readTokens(); clearWorld();
+  const {A,B,C}=BAS, N=S.N, L=(len(A)+len(B)+len(C))/3, q=AQ();
+  const rP=0.04*L, rE=0.0085*L;
+  // lattice points
+  if(S.show.points){
+    for(let i=0;i<=N;i++)for(let j=0;j<=N;j++)for(let k=0;k<=N;k++){
+      const o=(i+j+k===0); sphere(f2c([i,j,k]),o?rP*1.15:rP,TOK.lp);
+    }
+  }
+  // grid
+  if(S.show.grid&&N>1){
+    const pr=[];
+    for(let j=0;j<=N;j++)for(let k=0;k<=N;k++){pr.push([f2c([0,j,k]),f2c([N,j,k])]);pr.push([f2c([j,0,k]),f2c([j,N,k])]);pr.push([f2c([j,k,0]),f2c([j,k,N])])}
+    segments(pr,TOK.edge,0.55);
+  }
+  // unit cell edges
+  const cE=[[[0,0,0],[1,0,0]],[[0,1,0],[1,1,0]],[[0,0,1],[1,0,1]],[[0,1,1],[1,1,1]],
+            [[0,0,0],[0,1,0]],[[1,0,0],[1,1,0]],[[0,0,1],[0,1,1]],[[1,0,1],[1,1,1]],
+            [[0,0,0],[0,0,1]],[[1,0,0],[1,0,1]],[[0,1,0],[0,1,1]],[[1,1,0],[1,1,1]]];
+  cE.forEach(([p,r],i)=>{ if(i===0||i===4||i===8) return; rod(f2c(p),f2c(r),rE,TOK.edge)});
+  // axes
+  arrow([0,0,0],A,rE*1.9,TOK.a); arrow([0,0,0],B,rE*1.9,TOK.b); arrow([0,0,0],C,rE*1.9,TOK.c);
+  label('a',mul(A,1.12),TOK.a); label('b',mul(B,1.12),TOK.b); label('c',mul(C,1.1),TOK.c); label('O',mul(add(A,add(B,C)),-0.06),TOK.muted,'sm');
+  // angle arcs
+  if(S.show.angles){
+    const rr=0.28*Math.min(len(A),len(B),len(C));
+    const arc=(u1,u2,col,name)=>{
+      u1=unit(u1);u2=unit(u2);const th=Math.acos(clamp(dot(u1,u2),-1,1)),pts=[];
+      for(let t=0;t<=24;t++){const s=t/24;pts.push(mul(unit(add(mul(u1,Math.sin((1-s)*th)),mul(u2,Math.sin(s*th)))),rr))}
+      polyline(pts,col,0.95); label(name,mul(unit(add(u1,u2)),rr*1.45),col,'sm');
+    };
+    arc(B,C,TOK.fg,'α'); arc(A,C,TOK.fg,'β'); arc(A,B,TOK.fg,'γ');
+  }
+  // hexagonal prism
+  if(S.sys==='hexagonal'&&S.show.hex){
+    const hx=[[1,0],[1,1],[0,1],[-1,0],[-1,-1],[0,-1]];
+    for(const z of [0,1]){
+      const ring=hx.map(([x,y])=>f2c([x,y,z])); polyline([...ring,ring[0]],TOK.edge,0.9,true,L);
+      hx.forEach(([x,y])=>{ if(x>=0&&y>=0&&x<=N&&y<=N&&S.show.points) return; sphere(f2c([x,y,z]),rP*0.75,TOK.lp,{transparent:true,opacity:.45}) });
+    }
+    hx.forEach(([x,y])=>polyline([f2c([x,y,0]),f2c([x,y,1])],TOK.edge,0.9,true,L));
+  }
+  // point P
+  if(S.show.P){
+    const [qq,rr,ss]=S.P, p=f2c(S.P);
+    const p1=f2c([qq,0,0]),p2=f2c([qq,rr,0]);
+    polyline([[0,0,0],p1],TOK.a,1,true,L); polyline([p1,p2],TOK.b,1,true,L); polyline([p2,p],TOK.c,1,true,L);
+    sphere(p,rP*1.25,TOK.pt);
+    label(`P (${nice(qq)} ${nice(rr)} ${nice(ss)})`,add(p,mul([1,1,1],0.06*L)),TOK.pt);
+  }
+  // direction
+  if(S.show.dir){
+    const v=S.dir; let s,e;
+    if(S.dirMode==='book'){const m=Math.max(...v.map(Math.abs)); const sf=bookStart(v); s=sf; e=add(sf,mul(v,1/m));}
+    else if(S.dirMode==='origin'){s=[0,0,0];e=v.slice();}
+    else {s=S.P.slice();e=add(S.P,v);}
+    const sc=f2c(s), ec=f2c(e);
+    arrow(sc,ec,rE*2.4,TOK.dir);
+    const lab = (q&&q.type==='dir')?'[ ? ? ? ]':idx(v,'[',']');
+    label(lab,add(ec,mul(unit(sub(ec,sc)),0.12*L)),TOK.dir);
+    if(len(s)>1e-9 && S.dirMode==='book'){ sphere(sc,rP*0.6,TOK.dir); label('O′',add(sc,[0,0,-0.12*L]),TOK.dir,'sm'); }
+  }
+  // plane
+  if(S.show.plane){
+    const h=S.hkl, R=recip(), G=add(add(mul(R.As,h[0]),mul(R.Bs,h[1])),mul(R.Cs,h[2]));
+    const o=bookStart(h), dBook=1+h.reduce((a,x)=>a+(x<0?x:0),0);
+    if(S.plMode==='book'){
+      drawPolygon(clipPlane(h,dBook,1),G,TOK.pl,0.42);
+      // intercepts
+      const lab=(q&&q.type==='plane');
+      [0,1,2].forEach(i=>{ if(h[i]===0) return; const f=o.slice(); f[i]+=1/h[i]; const c=f2c(f);
+        sphere(c,rP*0.55,TOK.pl); if(!lab) label(frac1(h[i]),add(c,mul([1,1,1],0.05*L)),TOK.pl,'sm'); });
+      if(o.some(x=>x)) { sphere(f2c(o),rP*0.6,TOK.pl); label('O″',add(f2c(o),[0,0,-0.12*L]),TOK.pl,'sm'); }
+      // label at centroid
+      const pts=clipPlane(h,dBook,1).map(f2c);
+      if(pts.length){const cen=mul(pts.reduce(add,[0,0,0]),1/pts.length); label(lab?'( ? ? ? )':idx(h,'(',')'),cen,TOK.pl);}
+    } else {
+      const C=[];for(const x of [0,N])for(const y of [0,N])for(const z of [0,N])C.push(dot(h,[x,y,z]));
+      const lo=Math.ceil(Math.min(...C)-1e-9), hi=Math.floor(Math.max(...C)+1e-9);
+      let cnt=0;
+      for(let n=lo;n<=hi&&cnt<60;n++){ const pts=clipPlane(h,n,N); if(pts.length<3) continue; cnt++;
+        drawPolygon(pts,G,TOK.pl,n===dBook?0.5:0.16,n===dBook); }
+      const pts=clipPlane(h,dBook,N).map(f2c);
+      if(pts.length){const cen=mul(pts.reduce(add,[0,0,0]),1/pts.length); label((q&&q.type==='plane')?'( ? ? ? )':idx(h,'(',')'),cen,TOK.pl);}
+    }
+  }
+  dirty=true;
+}
+
+/* ---------- camera ---------- */
+const cam={theta:Math.atan2(0.42,1), phi:1.13, dist:5, target:new THREE.Vector3()};
+let tween=null, dirty=true;
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function boxCenter(){ return V3(f2c([S.N/2,S.N/2,S.N/2])) }
+function fit(){
+  const d=len(f2c([S.N,S.N,S.N])); const ext=Math.max(d, ...[[S.N,0,0],[0,S.N,0],[0,0,S.N],[S.N,S.N,0],[S.N,0,S.N],[0,S.N,S.N]].map(f=>len(sub(f2c(f),f2c([S.N,S.N,S.N]))) ));
+  const hx=(S.sys==='hexagonal'&&S.show.hex&&S.N<2);
+  cam.target.copy(hx?V3(f2c([0,0,.5])):boxCenter()); cam.dist=(ext*2.1+0.6)*(hx?1.35:1); dirty=true;
+}
+function setViewDir(v,animate=true){
+  v=unit(v); let th=Math.atan2(v[1],v[0]); const ph=clamp(Math.acos(clamp(v[2],-1,1)),0.015,Math.PI-0.015);
+  if(Math.abs(v[0])<1e-6&&Math.abs(v[1])<1e-6) th=cam.theta;
+  let dth=th-cam.theta; dth=((dth+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+  if(!animate||reduceMotion){cam.theta+=dth;cam.phi=ph;dirty=true;return}
+  tween={t0:performance.now(),th0:cam.theta,ph0:cam.phi,dth,ph1:ph};
+}
+function placeCamera(){
+  const off=new THREE.Vector3(Math.sin(cam.phi)*Math.cos(cam.theta),Math.sin(cam.phi)*Math.sin(cam.theta),Math.cos(cam.phi));
+  const w=stage.clientWidth,h=stage.clientHeight,asp=w/Math.max(1,h);
+  pcam.aspect=asp; pcam.position.copy(cam.target).addScaledVector(off,cam.dist); pcam.lookAt(cam.target); pcam.updateProjectionMatrix();
+  const hh=cam.dist*Math.tan(16*D2R);
+  ocam.left=-hh*asp;ocam.right=hh*asp;ocam.top=hh;ocam.bottom=-hh;
+  ocam.position.copy(cam.target).addScaledVector(off,60); ocam.lookAt(cam.target); ocam.updateProjectionMatrix();
+  const c=S.show.ortho?ocam:pcam;
+  keyLight.position.copy(c.position).add(new THREE.Vector3(0,0,cam.dist));
+  return c;
+}
+function frame(now){
+  if(tween){ const t=clamp((now-tween.t0)/450,0,1), e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    cam.theta=tween.th0+tween.dth*e; cam.phi=tween.ph0+(tween.ph1-tween.ph0)*e; dirty=true; if(t>=1) tween=null; }
+  if(dirty){
+    const c=placeCamera(); renderer.render(scene,c);
+    const w=stage.clientWidth,h=stage.clientHeight, v=new THREE.Vector3();
+    for(const L of LABELS){ v.copy(L.v).project(c); const x=(v.x+1)/2*w, y=(1-v.y)/2*h;
+      L.el.style.transform=`translate(${x}px,${y}px) translate(-50%,-50%)`; L.el.style.display=(v.z>1||v.z<-1)?'none':''; }
+    dirty=false;
+  }
+  requestAnimationFrame(frame);
+}
+function resize(){ const w=stage.clientWidth,h=stage.clientHeight; renderer.setSize(w,h,false); dirty=true; }
+new ResizeObserver(resize).observe(stage);
+
+// pointer controls
+const ptrs=new Map(); let pinch0=0, dist0=0;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});tween=null;
+  if(ptrs.size===2){const [p,q]=[...ptrs.values()];pinch0=Math.hypot(p.x-q.x,p.y-q.y);dist0=cam.dist}});
+cv.addEventListener('pointermove',e=>{ if(!ptrs.has(e.pointerId)) return; const pr=ptrs.get(e.pointerId);
+  const dx=e.clientX-pr.x, dy=e.clientY-pr.y; ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===1){cam.theta-=dx*0.009; cam.phi=clamp(cam.phi-dy*0.009,0.015,Math.PI-0.015); dirty=true;}
+  else if(ptrs.size===2){const [p,q]=[...ptrs.values()];const d=Math.hypot(p.x-q.x,p.y-q.y); if(pinch0>0){cam.dist=clamp(dist0*pinch0/d,0.5,60);dirty=true}}
+});
+const up=e=>{ptrs.delete(e.pointerId); if(ptrs.size<2) pinch0=0;};
+cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',e=>{e.preventDefault();cam.dist=clamp(cam.dist*Math.exp(e.deltaY*0.0012),0.5,60);dirty=true},{passive:false});
+
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{
+  const k=b.dataset.view, {A,B,C}=BAS;
+  if(k==='iso') setViewDir([1,0.42,0.48]);
+  else if(k==='a') setViewDir(A);
+  else if(k==='b') setViewDir(B);
+  else if(k==='c') setViewDir(C);
+  else if(k==='dir') setViewDir(f2c(S.dir));
+  else if(k==='norm'){const R=recip();setViewDir(add(add(mul(R.As,S.hkl[0]),mul(R.Bs,S.hkl[1])),mul(R.Cs,S.hkl[2])));}
+}));
+
+/* ---------- UI construction ---------- */
+const $=id=>document.getElementById(id);
+const sysEl=$('systems');
+SYS.forEach(s=>{const b=document.createElement('button');b.className='sysbtn';b.dataset.sys=s.id;
+  b.innerHTML=`<b>${s.zh}<span>${s.en}</span></b><i>${s.rule}</i>`; b.addEventListener('click',()=>{ const z=AQ(); if(z&&z.type==='sys') return; selectSystem(s.id)}); sysEl.appendChild(b)});
+
+const paramsEl=$('params'); const PIN={};
+PKEYS.forEach(([k,lab,mn,mx,st])=>{
+  const row=document.createElement('div'); row.className='prow';
+  row.innerHTML=`<label for="p_${k}">${lab}</label><input type="range" id="p_${k}" min="${mn}" max="${mx}" step="${st}"><output id="o_${k}"></output>`;
+  paramsEl.appendChild(row); const inp=row.querySelector('input');
+  PIN[k]={row,inp,out:row.querySelector('output')};
+  inp.addEventListener('input',()=>{
+    const np={...S.p,[k]:parseFloat(inp.value)};
+    const e=enforce(S.sys,np); const b=basisOf(e);
+    if(!b){ inp.value=S.p[k]; $('symNote').hidden=false; $('symNote').textContent='這組角度無法構成晶胞（三個角度不相容），已保持原值。'; return; }
+    S.p=e; BAS=b; refresh(false);
+  });
+});
+
+const pP=$('pParams');
+['q','r','s'].forEach((k,i)=>{
+  const row=document.createElement('div');row.className='prow';
+  row.innerHTML=`<label for="P_${k}" class="c-p">${k}</label><input type="range" id="P_${k}" min="0" max="1" step="0.05"><output id="Po_${k}"></output>`;
+  pP.appendChild(row); const inp=row.querySelector('input');
+  inp.addEventListener('input',()=>{S.P[i]=parseFloat(inp.value);refresh(false)});
+});
+[['原點',[0,0,0]],['體心',[.5,.5,.5]],['底心',[.5,.5,0]],['面心',[.5,0,.5]],['稜中點',[.5,0,0]],['對角',[1,1,1]],['¼ ¼ ¼',[.25,.25,.25]]].forEach(([n,v])=>{
+  const b=document.createElement('button');b.className='chip';b.textContent=`${n} ${v.map(nice).join(' ')}`;
+  b.addEventListener('click',()=>{S.P=v.slice();refresh(false)});$('pChips').appendChild(b)});
+
+function makeSteppers(el,key,names){
+  names.forEach((n,i)=>{
+    const s=document.createElement('div');s.className='stepper';
+    s.innerHTML=`<span>${n}</span><button aria-label="${n} 減一">−</button><output></output><button aria-label="${n} 加一">+</button>`;
+    const [bm,bp]=s.querySelectorAll('button');
+    const step=d=>{ const z=AQ(); if(z&&((key==='dir'&&z.type==='dir')||(key==='hkl'&&z.type==='plane'))) return;
+      const v=S[key].slice(); v[i]=clamp(v[i]+d,-6,6); if(v.every(x=>x===0)) v[i]=clamp(v[i]+d,-6,6); S[key]=v; refresh(false)};
+    bm.addEventListener('click',()=>step(-1)); bp.addEventListener('click',()=>step(1));
+    el.appendChild(s);
+  });
+  const big=document.createElement('div');big.className='bignot';big.id=key+'Big';el.appendChild(big);
+}
+makeSteppers($('dirStep'),'dir',['u','v','w']);
+makeSteppers($('plStep'),'hkl',['h','k','l']);
+
+function makeSeg(el,key,opts){
+  opts.forEach(([v,t])=>{const b=document.createElement('button');b.textContent=t;b.dataset.v=v;
+    b.addEventListener('click',()=>{ const z=AQ(); if(z&&((key==='dirMode'&&z.type==='dir')||(key==='plMode'&&z.type==='plane'))) return; S[key]=v;refresh(false)});el.appendChild(b)});
+}
+makeSeg($('dirMode'),'dirMode',[['book','教科書畫法（畫在晶胞內）'],['origin','從原點 O'],['P','從點 P']]);
+makeSeg($('plMode'),'plMode',[['book','單一平面（晶胞內）'],['family','平行平面族']]);
+
+const TOG=[['points','晶格點'],['grid','晶胞格線'],['angles','α β γ 角度'],['P','點 P'],['dir','晶向箭頭'],['plane','晶面'],['hex','六方稜柱（六方晶系）'],['ortho','正交投影']];
+TOG.forEach(([k,t])=>{const l=document.createElement('label');l.innerHTML=`<input type="checkbox" id="t_${k}"> ${t}`;
+  const c=l.querySelector('input');c.checked=S.show[k];c.addEventListener('change',()=>{S.show[k]=c.checked;refresh(false)});$('toggles').appendChild(l)});
+$('t_hex').addEventListener('change',()=>{fit()});
+$('nCell').addEventListener('input',e=>{S.N=parseInt(e.target.value);S.P=S.P.map(x=>Math.min(x,S.N));refresh(true)});
+
+function selectSystem(id){
+  S.sys=id; S.p={...SYSMAP[id].def}; BAS=basisOf(S.p); refresh(true);
+}
+
+/* ---------- refresh UI + scene ---------- */
+function dl(el,rows){el.innerHTML=rows.map(([k,v,c])=>`<dt>${k}</dt><dd class="${c||''}">${v}</dd>`).join('')}
+function refresh(refit){
+  const q=AQ(), qs=q&&q.type==='sys', qd=q&&q.type==='dir', qp=q&&q.type==='plane';
+  const sys=SYSMAP[S.sys];
+  document.querySelectorAll('.sysbtn').forEach(b=>b.setAttribute('aria-pressed',(!qs&&b.dataset.sys===S.sys)?'true':'false'));
+  $('rule').innerHTML=qs?'晶系已隱藏，請從圖形判斷。':`<b>${sys.zh}晶系</b>　${sys.rule}`;
+  PKEYS.forEach(([k])=>{const o=PIN[k]; o.inp.value=S.p[k]; const locked=qs||!sys.free.includes(k);
+    o.inp.disabled=locked; o.row.classList.toggle('locked',locked);
+    o.out.textContent=qs?'?':(k.length===1?S.p[k].toFixed(2):S.p[k].toFixed(0)+'°');});
+  // symmetry note
+  const cl=classify(S.p), note=$('symNote');
+  if(!qs&&cl!==S.sys){note.hidden=false;note.textContent=`目前的參數其實符合更高對稱的「${SYSMAP[cl].zh}晶系」。${sys.zh}晶系要求 ${sys.rule}，請把參數調成不相等。`;}
+  else note.hidden=true;
+  const R=recip();
+  dl($('roCell'),qs?[['晶胞體積 V','?']]:[
+    ['晶格參數',`a=${f2(S.p.a)} b=${f2(S.p.b)} c=${f2(S.p.c)}`],
+    ['夾角',`α=${S.p.al.toFixed(0)}° β=${S.p.be.toFixed(0)}° γ=${S.p.ga.toFixed(0)}°`],
+    ['晶胞體積 V',`${f3(R.V)} (a·(b×c))`],
+    ['每晶胞晶格點','1（8 個角 × 1/8）']]);
+  // P
+  ['q','r','s'].forEach((k,i)=>{const inp=$('P_'+k);inp.max=S.N;inp.value=S.P[i];$('Po_'+k).textContent=nice(S.P[i])});
+  const pc=f2c(S.P), isLP=S.P.every(x=>Math.abs(x-Math.round(x))<1e-9);
+  dl($('roP'),[
+    ['位置向量',`OP = ${nice(S.P[0])}<span class="c-a">a</span> + ${nice(S.P[1])}<span class="c-b">b</span> + ${nice(S.P[2])}<span class="c-c">c</span>`],
+    ['直角座標',qs?'?':`(${f3(pc[0])}, ${f3(pc[1])}, ${f3(pc[2])})`],
+    ['|OP|',qs?'?':f3(len(pc))],
+    ['是否為晶格點',isLP?'<span class="good">是，q r s 皆為整數</span>':'否，簡單晶格 P 只在整數座標上有晶格點','txt']]);
+  // direction
+  const v=S.dir, g=gcd3(v), red=v.map(x=>x/g);
+  $('dirTag').innerHTML=qd?'[ ? ? ? ]':idxS(v,'[',']');
+  $('dirBig').innerHTML=qd?'[???]':idx(v,'[',']');
+  document.querySelectorAll('#dirStep output').forEach((o,i)=>o.textContent=qd?'?':v[i]);
+  document.querySelectorAll('#dirStep button').forEach(b=>b.disabled=!!qd);
+  document.querySelectorAll('#dirMode button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===S.dirMode?'true':'false'));
+  const rv=f2c(v);
+  const dirRows=qd?[['晶向','請在練習區作答']]:[
+    ['向量',`r = ${v[0]}<span class="c-a">a</span> + ${v[1]}<span class="c-b">b</span> + ${v[2]}<span class="c-c">c</span>`],
+    ['長度 |r|',f3(len(rv))],
+    ['等效晶向族',idx(v.map(Math.abs).sort((a,b)=>b-a),'⟨','⟩')+(S.sys==='cubic'?'':'（僅立方晶系所有排列皆等效）')],
+  ];
+  if(!qd&&g>1) dirRows.push(['化簡',`${idx(v,'[',']')} 與 ${idx(red,'[',']')} 同方向，習慣寫最小整數`,'txt']);
+  if(!qd&&S.dirMode==='book'){const m=Math.max(...v.map(Math.abs));const st=bookStart(v);
+    dirRows.push(['畫法',`起點 O′ = (${st.join(' ')})，終點 = O′ + (${v.map(x=>nice(x/m)).join(', ')})，即除以最大分量 ${m}`,'txt']);}
+  if(!qd&&S.sys==='hexagonal'){const U=2*v[0]-v[1],V=2*v[1]-v[0],T=-(v[0]+v[1]),W=3*v[2];const gg=gcd(gcd3([U,V,T]),W)||1;
+    dirRows.push(['四軸指數',`${idx([U/gg,V/gg,T/gg,W/gg],'[',']')}　(U V T W)`]);}
+  dl($('roDir'),dirRows);
+  // plane
+  const h=S.hkl, gh=gcd3(h);
+  $('plTag').innerHTML=qp?'( ? ? ? )':idxS(h,'(',')');
+  $('hklBig').innerHTML=qp?'(???)':idx(h,'(',')');
+  document.querySelectorAll('#plStep output').forEach((o,i)=>o.textContent=qp?'?':h[i]);
+  document.querySelectorAll('#plStep button').forEach(b=>b.disabled=!!qp);
+  document.querySelectorAll('#plMode button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===S.plMode?'true':'false'));
+  const G=add(add(mul(R.As,h[0]),mul(R.Bs,h[1])),mul(R.Cs,h[2])), dh=1/len(G);
+  const o=bookStart(h);
+  const plRows=qp?[['晶面','請在練習區作答']]:[
+    ['截距',`${frac1(h[0])}<span class="c-a">a</span>, ${frac1(h[1])}<span class="c-b">b</span>, ${frac1(h[2])}<span class="c-c">c</span>` + (o.some(x=>x)?`　（以 O″=(${o.join(' ')}) 為原點）`:'')],
+    ['倒數 → 指數',`(1/截距) = (${h.join(', ')}) → ${idx(h,'(',')')}`],
+    ['面間距 d<sub>hkl</sub>',`${f3(dh)}`+(gh>1?`　（是 ${idx(h.map(x=>x/gh),'(',')')} 的 1/${gh}）`:'')],
+    ['等效晶面族',idx(h.map(Math.abs).sort((a,b)=>b-a),'{','}')+(S.sys==='cubic'?'':'（僅立方晶系所有排列皆等效）')],
+  ];
+  if(!qp&&S.sys==='hexagonal') plRows.push(['四軸指數',`${idx([h[0],h[1],-(h[0]+h[1]),h[2]],'(',')')}　(h k i l)，i = −(h+k)`]);
+  dl($('roPl'),plRows);
+  // relation
+  if(qd||qp){ dl($('roRel'),[['關係','練習中暫時隱藏','txt']]); }
+  else{
+    const hd=h[0]*v[0]+h[1]*v[1]+h[2]*v[2];
+    const cosang=dot(rv,G)/(len(rv)*len(G)), angN=Math.acos(clamp(Math.abs(cosang),0,1))/D2R;
+    const rel=[['h·u + k·v + l·w',String(hd)]];
+    if(hd===0) rel.push(['結果','<span class="good">晶向位於此晶面內</span>（平行於晶面）','txt']);
+    else if(angN<0.05) rel.push(['結果','<span class="good">晶向垂直於此晶面</span>','txt']);
+    else rel.push(['晶向與晶面夾角',`${(90-angN).toFixed(1)}°`]);
+    rel.push(['提示',S.sys==='cubic'?'立方晶系中 [hkl] 一定垂直於 (hkl)。':'非立方晶系中 [hkl] 通常不垂直於 (hkl)，可把晶向設成與晶面相同指數來觀察。','txt']);
+    dl($('roRel'),rel);
+  }
+  // legend
+  $('legend').innerHTML=`<span class="sys">${qs?'? 晶系':sys.zh+'晶系 '+sys.en}</span>`+
+    `<span class="c-p">P (${S.P.map(nice).join(' ')})</span>`+
+    `<span class="c-d">${qd?'[ ? ? ? ]':idx(v,'[',']')}</span>`+
+    `<span class="c-l">${qp?'( ? ? ? )':idx(h,'(',')')}</span>`;
+  $('t_hex').parentElement.hidden=S.sys!=='hexagonal';
+  $('nOut').textContent=S.N; $('nCell').value=S.N;
+  if(refit) fit();
+  build();
+}
+
+/* ---------- quiz ---------- */
+const rint=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const rnd=(a,b,st)=>Math.round((a+Math.random()*(b-a))/st)*st;
+function randIdx(){let v;do{v=[rint(-2,2),rint(-2,2),rint(-2,2)]}while(v.every(x=>x===0)||gcd3(v)!==1);return v}
+function randomSystemParams(id){
+  for(let t=0;t<200;t++){
+    let p={a:rnd(.8,1.6,.05),b:rnd(.8,1.6,.05),c:rnd(.8,1.8,.05),al:rnd(65,115,1),be:rnd(95,120,1),ga:rnd(65,115,1)};
+    if(id==='trigonal') p.al=rint(0,1)?rint(55,75):rint(100,112);
+    p=enforce(id,p); if(!basisOf(p)) continue;
+    const ok=classify(p)===id;
+    const distinct=(x,y)=>Math.abs(x-y)>0.2, distA=(x,y)=>Math.abs(x-y)>8;
+    if(!ok) continue;
+    if(['orthorhombic','monoclinic','triclinic'].includes(id)&&!(distinct(p.a,p.b)&&distinct(p.b,p.c)&&distinct(p.a,p.c))) continue;
+    if(id==='tetragonal'&&!distinct(p.a,p.c)) continue;
+    if(id==='monoclinic'&&!distA(p.be,90)) continue;
+    if(id==='triclinic'&&!(distA(p.al,90)&&distA(p.be,90)&&distA(p.ga,90)&&distA(p.al,p.be)&&distA(p.be,p.ga)&&distA(p.al,p.ga))) continue;
+    return p;
+  }
+  return {...SYSMAP[id].def};
+}
+const qb=$('quizbox');
+function startQuiz(type){
+  if(type==='sys'){ const id=SYS[rint(0,6)].id; S.sys=id; S.p=randomSystemParams(id); BAS=basisOf(S.p); S.quiz={type,ans:id}; S.show.angles=true; }
+  else if(type==='dir'){ S.dir=randIdx(); S.dirMode='book'; S.show.dir=true; S.quiz={type,ans:S.dir.slice()}; }
+  else { S.hkl=randIdx(); S.plMode='book'; S.show.plane=true; S.quiz={type,ans:S.hkl.slice()}; }
+  $('t_dir').checked=S.show.dir; $('t_plane').checked=S.show.plane; $('t_angles').checked=S.show.angles;
+  renderQuiz(); refresh(true); setViewDir([1,0.42,0.48]);
+}
+function renderQuiz(msg,ok){
+  const q=S.quiz; if(!q){qb.hidden=true;return} qb.hidden=false;
+  let body='';
+  if(q.type==='sys'){
+    body=`<div class="prompt">旋轉晶胞、切換「沿 a / b / c」視角，判斷這是哪一種晶系？</div><div class="qsys">${SYS.map(s=>`<button data-a="${s.id}">${s.zh}</button>`).join('')}</div>`;
+  } else {
+    const br=q.type==='dir'?['[',']']:['(',')'];
+    body=`<div class="prompt">${q.type==='dir'?'讀出橘色箭頭的晶向指數 [u v w]（O′ 為箭頭起點）':'讀出青色晶面的米勒指數 (h k l)（看它與 a、b、c 的截距）'}</div>
+    <div class="qinputs">${br[0]} <input id="qa0" type="number" step="1" aria-label="第一個指數"> <input id="qa1" type="number" step="1" aria-label="第二個指數"> <input id="qa2" type="number" step="1" aria-label="第三個指數"> ${br[1]}
+    <button class="btn primary" id="qcheck">對答案</button></div>`;
+  }
+  body+=`<div class="fb ${ok===true?'ok':ok===false?'no':''}" id="qfb">${msg||''}</div>
+  <div class="qbtns"><button class="btn" id="qnext">下一題</button><button class="btn" id="qend">結束練習</button></div>`;
+  qb.innerHTML=body;
+  $('score').textContent=S.score.total?`${S.score.ok} / ${S.score.total}`:'';
+  qb.querySelectorAll('[data-a]').forEach(b=>b.addEventListener('click',()=>answer(b.dataset.a)));
+  const ck=$('qcheck'); if(ck) ck.addEventListener('click',()=>answer([0,1,2].map(i=>parseInt($('qa'+i).value))));
+  $('qnext').addEventListener('click',()=>startQuiz(q.type));
+  $('qend').addEventListener('click',()=>{S.quiz=null;renderQuiz();refresh(false)});
+}
+function answer(a){
+  const q=S.quiz; if(!q||q.done) return;
+  let ok=false,msg='';
+  if(q.type==='sys'){ ok=a===q.ans; const s=SYSMAP[q.ans];
+    msg=(ok?'答對了！':`不對，答案是「${s.zh}晶系」。`)+` 規則：${s.rule}。參數 a=${f2(S.p.a)} b=${f2(S.p.b)} c=${f2(S.p.c)}，α=${S.p.al}° β=${S.p.be}° γ=${S.p.ga}°。`; }
+  else{
+    if(a.some(x=>isNaN(x))){renderQuiz('請填入三個整數。',false);return}
+    const ans=q.ans, same=a.every((x,i)=>x===ans[i]), neg=a.every((x,i)=>x===-ans[i]);
+    const ga=gcd3(a), prop=ga>0&&a.every((x,i)=>x/ga===ans[i]);
+    const br=q.type==='dir'?['[',']']:['(',')'];
+    if(q.type==='dir'){ ok=same||prop; msg=same?'答對了！':prop?`方向正確；習慣寫成最小整數 ${idx(ans,...br)}。`:neg?`方向相反了：${idx(a,...br)} 指向反方向，答案是 ${idx(ans,...br)}。`:`答案是 ${idx(ans,...br)}。`; }
+    else { ok=same||neg; msg=same?'答對了！':neg?`也對：${idx(a,...br)} 與 ${idx(ans,...br)} 是同一個平面（原點選在另一側）。`:`答案是 ${idx(ans,...br)}，截距為 ${ans.map(frac1).join(', ')}。`; }
+  }
+  S.score.total++; if(ok) S.score.ok++; q.done=true;
+  refresh(false); renderQuiz(msg,ok);
+}
+document.querySelectorAll('[data-quiz]').forEach(b=>b.addEventListener('click',()=>startQuiz(b.dataset.quiz)));
+
+/* ---------- theme changes ---------- */
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>build());
+new MutationObserver(()=>build()).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ---------- start ---------- */
+resize(); refresh(true); setViewDir([1,0.42,0.48],false);
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
